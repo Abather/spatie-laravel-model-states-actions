@@ -4,13 +4,15 @@ namespace Abather\SpatieLaravelModelStatesActions;
 
 use Abather\SpatieLaravelModelStatesActions\Services\ChangStateService;
 use Filament\Actions\Action;
+use Filament\Actions\Action as TableAction;
 use Filament\Forms\Components\Select;
 use Filament\Infolists\Components\TextEntry;
-use Filament\Actions\Action as TableAction;
+use Filament\Notifications\Notification;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Lang;
+use Livewire\Component as LivewireComponent;
 use Spatie\ModelStates\State as base;
 
 abstract class State extends base
@@ -34,6 +36,12 @@ abstract class State extends base
     protected static ?bool $skip_authorization = false;
 
     protected static ?bool $requires_confirmation = true;
+
+    protected static ?bool $send_notification = true;
+
+    protected static ?string $success_notification_title = null;
+
+    protected static ?string $success_notification_body = null;
 
     //Title will be viewed in tables and resources view/edit pages.
 
@@ -167,6 +175,7 @@ abstract class State extends base
             ->icon(static::icon())
             ->authorize(fn (Model $record) => static::isAuthorized($user, $record, null, $field))
             ->action(fn (Model $record, ?array $data) => static::transferToMe($record, $user, $data, $field))
+            ->after(fn (LivewireComponent $livewire) => $livewire->js('$wire.$refresh()'))
             ->requiresConfirmation(static::requiresConfirmation());
     }
 
@@ -255,6 +264,14 @@ abstract class State extends base
             ->attribute(static::getStateKeyName($field))
             ->skipAuthorization(static::skipAuthorization())
             ->to(static::class);
+
+        if (static::sendNotification()) {
+            Notification::make()
+                ->title(static::successNotificationTitle())
+                ->when(filled(static::successNotificationBody()), fn (Notification $notification) => $notification->body(static::successNotificationBody()))
+                ->success()
+                ->send();
+        }
     }
 
     public static function skipAuthorization(): bool
@@ -265,6 +282,21 @@ abstract class State extends base
     public static function requiresConfirmation(): bool
     {
         return static::$requires_confirmation;
+    }
+
+    public static function sendNotification(): bool
+    {
+        return static::$send_notification;
+    }
+
+    public static function successNotificationTitle(): ?string
+    {
+        return static::$success_notification_title ?? __('spatie-laravel-model-states-actions::notifications.success', ['state' => static::title()]);
+    }
+
+    public static function successNotificationBody(): ?string
+    {
+        return static::$success_notification_body;
     }
 
     public static function isAuthorized($user, $record, ?string $finalState = null, ?string $field = null): bool

@@ -294,6 +294,66 @@ abstract class OrderState extends State
 
 this will stop confirmation modal to all states under this class.
 
+### Notifications & live refresh
+
+whenever a state transition completes, the package will automatically:
+
+- send a success notification to the user.
+- refresh the Livewire component that triggered the action, so the new state is reflected right away without a manual page reload.
+
+the default notification title is:
+
+```
+States transitioned to (:state) successfully.
+```
+
+where `:state` is replaced with the state's `title()`.
+
+you can disable the notification entirely by overriding `$send_notification` in your state:
+
+```php
+<?php
+
+namespace App\States\Contract;
+
+class Canceled extends ContractState
+{
+    protected static ?bool $send_notification = false;
+}
+```
+
+or customize the title and add a body per state by overriding `$success_notification_title` and `$success_notification_body`:
+
+```php
+<?php
+
+namespace App\States\Payment;
+
+class Approved extends PaymentState
+{
+    protected static ?string $success_notification_title = 'Payment approved!';
+    protected static ?string $success_notification_body = 'The payment has been marked as approved.';
+}
+```
+
+since a static property can only hold a fixed value, if you need translated text (or anything that needs parameters, like `:state`) override the `successNotificationTitle()`/`successNotificationBody()` methods instead and use `__()`:
+
+```php
+<?php
+
+namespace App\States\Payment;
+
+class Approved extends PaymentState
+{
+    public static function successNotificationTitle(): ?string
+    {
+        return __('payments.notifications.approved', ['state' => static::title()]);
+    }
+}
+```
+
+if you don't override `$success_notification_title`, the default text is resolved from the package's own translation file, so it's available out of the box in both English and Arabic without any extra setup on your end.
+
 ## Add State Filters To Table
 
 you can include state filters to your table by using `StateFilterService::make(Contract::class)->tableFilter()`as:
