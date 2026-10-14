@@ -17,4 +17,9 @@ class SpatieLaravelModelStatesActionsServiceProvider extends PackageServiceProvi
         $package
             ->name('spatie-laravel-model-states-actions');
     }
+
+    public function packageBooted(): void
+    {
+        $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'spatie-laravel-model-states-actions');
+    }
 }
